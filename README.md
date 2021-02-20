@@ -1,2 +1,2 @@
 # dfx-farming
-DFX farming contracts
+DFX farming and staking contracts
