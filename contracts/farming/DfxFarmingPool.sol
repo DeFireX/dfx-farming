@@ -250,6 +250,7 @@ contract DfxFarmingPool is Ownable {
         devaddr = _devaddr;
     }
 
+    // XXX: return available DFXs on dfxReservoir.
     function availableDfx(uint256 requestedTokens) internal view returns (uint256) {
         uint256 reservoirBalance = dfx.balanceOf(address(dfxReservoir));
         uint256 dfxAvailable = (requestedTokens > reservoirBalance)
