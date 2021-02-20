@@ -1,0 +1,21 @@
+{
+  "name": "dfx-farming",
+  "version": "1.0.0",
+  "description": "DFX farming contracts",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.3.0",
+    "@openzeppelin/contracts-ethereum-package": "^3.0.0",
+    "@openzeppelin/upgrades": "^2.8.0"
+  },
+  "devDependencies": {
+    "@truffle/hdwallet-provider": "^1.2.0",
+    "dotenv": "^8.2.0",
+    "path": "^0.12.7",
+    "truffle": "^5.1.56",
+    "truffle-flattener": "^1.5.0",
+    "truffle-plugin-verify": "^0.5.4",
+    "truffle-contract-size": "^2.0.1"
+  }
+}
