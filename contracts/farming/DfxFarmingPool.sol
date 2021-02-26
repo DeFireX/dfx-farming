@@ -16,7 +16,8 @@ import "./interfaces/IReservoir.sol";
  *  XXX: Removed migration logic;
  *  XXX: Removed token minting and added token reservoir;
  *  XXX: Added check if LP token has already been added;
- *  XXX: Owner can update reservoir address and dfxPerBlock value.
+ *  XXX: Owner can update reservoir address and dfxPerBlock value;
+ *  XXX: Added defiController function to claim profit.
  */
 
 contract DfxFarmingPool is Ownable {
@@ -68,10 +69,13 @@ contract DfxFarmingPool is Ownable {
     // The block number when DFX mining starts.
     uint256 public startBlock;
 
-    // XXX: token reservoir
+    // XXX: token reservoir.
     IReservoir public dfxReservoir;
 
-    // XXX: checking already added LP tokens
+    // XXX: allow to claim profit from tokenized startegy.
+    address public defiController;
+
+    // XXX: checking already added LP tokens.
     mapping(address => bool) private lpTokens;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -80,16 +84,19 @@ contract DfxFarmingPool is Ownable {
 
     event SetDfxReservoir(address reservoir); // XXX: set reservoir event
     event SetDfxPerBlock(uint256 dfxPerBlock); // XXX: set dfxPerBlock event
+    event SetDefiController(address defiController); // XXX: set defiController event
 
     constructor(
         IERC20 _dfx,
         address _devaddr,
+        address _defiController,
         uint256 _dfxPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock
     ) public {
         dfx = _dfx;
         devaddr = _devaddr;
+        defiController = _defiController;
         dfxPerBlock = _dfxPerBlock;
         bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
@@ -137,6 +144,12 @@ contract DfxFarmingPool is Ownable {
     function setDfxPerBlock(uint256 _dfxPerBlock) public onlyOwner {
         dfxPerBlock = _dfxPerBlock;
         emit SetDfxPerBlock(_dfxPerBlock);
+    }
+
+    // XXX: set defiController. Can only be called by the owner.
+    function setDefiController(address _defiController) public onlyOwner {
+        defiController = _defiController;
+        emit SetDefiController(_defiController);
     }
 
     // Return reward multiplier over the given _from to _to block.
