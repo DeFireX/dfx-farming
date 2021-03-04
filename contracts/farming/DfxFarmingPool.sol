@@ -17,6 +17,7 @@ import "./interfaces/IReservoir.sol";
  *  XXX: Removed token minting and added token reservoir;
  *  XXX: Added check if LP token has already been added;
  *  XXX: Owner can update reservoir address and dfxPerBlock value;
+ *  XXX: Removed bonus multiplier;
  *  XXX: Added defiController function to claim profit.
  */
 
@@ -53,12 +54,8 @@ contract DfxFarmingPool is Ownable {
     IERC20 public dfx;
     // Dev address.
     address public devaddr;
-    // Block number when bonus DFX period ends.
-    uint256 public bonusEndBlock;
     // DFX tokens created per block.
     uint256 public dfxPerBlock;
-    // Bonus muliplier for early dfx makers.
-    uint256 public constant BONUS_MULTIPLIER = 10;
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
@@ -91,14 +88,12 @@ contract DfxFarmingPool is Ownable {
         address _devaddr,
         address _defiController,
         uint256 _dfxPerBlock,
-        uint256 _startBlock,
-        uint256 _bonusEndBlock
+        uint256 _startBlock
     ) public {
         dfx = _dfx;
         devaddr = _devaddr;
         defiController = _defiController;
         dfxPerBlock = _dfxPerBlock;
-        bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
     }
 
@@ -154,15 +149,7 @@ contract DfxFarmingPool is Ownable {
 
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        } else if (_from >= bonusEndBlock) {
-            return _to.sub(_from);
-        } else {
-            return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                _to.sub(bonusEndBlock)
-            );
-        }
+        return _to.sub(_from);
     }
 
     // View function to see pending DFXs on frontend.
