@@ -21,6 +21,15 @@ const config = {
       port: 8545,
       network_id: '*'
     },
+    test: {
+      // https://github.com/trufflesuite/ganache-core#usage
+      provider() {
+        const { provider } = require('@openzeppelin/test-environment');
+        return provider;
+      },
+      skipDryRun: true,
+      network_id: '*'
+    },
     kovan: {
       gasPrice: 1e9, // 1 gwei
       gasLimit: 10 * 1e6,
@@ -45,7 +54,8 @@ const config = {
         optimizer: {
           enabled: true,
           runs: 200
-        }
+        },
+        evmVersion: "istanbul"
       }
     }
   },
