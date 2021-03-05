@@ -27,7 +27,7 @@ describe('Contract farming/DfxFarmingPool.sol', function () {
 
     const TOKEN_NAME = 'TEST';
     const TOKEN_SYMBOL = 'TEST';
-    const INITIAL_SUPPLY = ether('10000000');
+    const INITIAL_SUPPLY = ether('1000');
 
     const REWARD_TOKENS_SUPPLY = ether('1000');
     const REWARD_TOKENS_PER_BLOCK = ether('1');
@@ -93,7 +93,7 @@ describe('Contract farming/DfxFarmingPool.sol', function () {
         (await this.farmingPool.poolLength()).should.be.bignumber.equal(new BN(2));
     });
 
-    describe('owner functions tests', function () {
+    describe('owner functions', function () {
         it('should call transferOwnership by owner', async function () {
             await this.farmingPool.transferOwnership(testAddress, { from: owner });
             (await this.farmingPool.owner()).should.be.equal(testAddress);
@@ -163,7 +163,7 @@ describe('Contract farming/DfxFarmingPool.sol', function () {
 
         it('should call set a new lp by owner', async function () {
             await this.farmingPool.set(
-                ether('0'),
+                new BN(0),
                 ALLOC_POINT_LP_2,
                 true,
                 { from: owner });
@@ -172,11 +172,25 @@ describe('Contract farming/DfxFarmingPool.sol', function () {
         it('should fail on call set a new lp by anyone', async function () {
             await expectRevert(
                 this.farmingPool.set(
-                    ether('0'),
+                    new BN(0),
                     ALLOC_POINT_LP_2,
                     true,
                     { from: anyone }),
                 'Ownable: caller is not the owner'
+            );
+        });
+    });
+
+    describe('updateDev function', function () {
+        it('should call updateDev by devaddr', async function () {
+            await this.farmingPool.updateDev(testAddress, { from: devaddr });
+            (await this.farmingPool.devaddr()).should.be.equal(testAddress);
+        });
+
+        it('should fail on call updateDev by anyone', async function () {
+            await expectRevert(
+                this.farmingPool.updateDev(testAddress, { from: anyone }),
+                'updateDev: permission denied'
             );
         });
     });
