@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  */
 
 // This contract handles swapping to and from stDFX, DfxSwap's staking token.
-contract DfxStaking is ERC20("DeFireX Staked", "stDFX"){
+contract DfxStaking is ERC20("DeFireX Staked", "stDFX") {
     using SafeMath for uint256;
     IERC20 public dfx;
 
