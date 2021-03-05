@@ -47,6 +47,9 @@ const config = {
       network_id: '1'
     },
   },
+  mocha: {
+    timeout: 10000
+  },
   compilers: {
     solc: {
       version: '0.6.12',
