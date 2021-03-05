@@ -6,7 +6,6 @@ const {
     time,
     expectRevert,
 } = require('@openzeppelin/test-helpers');
-const { duration } = require('@openzeppelin/test-helpers/src/time');
 
 require('chai').should();
 
