@@ -46,6 +46,19 @@ const config = {
       skipDryRun: false,
       network_id: '1'
     },
+    bsc_testnet: {
+      provider: () => new HDWalletProvider(process.env.DEPLOYMENT_KEY, `https://data-seed-prebsc-1-s1.binance.org:8545`),
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      network_id: '97'
+    },
+    bsc: {
+      gasPrice: 10 * 1e9, // 10 gwei
+      provider: () => new HDWalletProvider(process.env.DEPLOYMENT_KEY, `https://bsc-dataseed1.binance.org`),
+      timeoutBlocks: 200,
+      skipDryRun: false,
+      network_id: '56'
+    },
   },
   mocha: {
     timeout: 10000
