@@ -18,7 +18,8 @@ import "./interfaces/IReservoir.sol";
  *  XXX: Added check if LP token has already been added;
  *  XXX: Owner can update reservoir address and dfxPerBlock value;
  *  XXX: Removed bonus multiplier;
- *  XXX: Added defiController function to claim profit.
+ *  XXX: Added defiController function to claim profit;
+ *  XXX: Use 1e18 instead of 1e12 for accumulated tokens per share.
  */
 
 contract DfxFarmingPool is Ownable {
@@ -47,7 +48,7 @@ contract DfxFarmingPool is Ownable {
         IERC20 lpToken;           // Address of LP token contract.
         uint256 allocPoint;       // How many allocation points assigned to this pool. DFXs to distribute per block.
         uint256 lastRewardBlock;  // Last block number that DFXs distribution occurs.
-        uint256 accDfxPerShare;   // Accumulated DFXs per share, times 1e12. See below.
+        uint256 accDfxPerShare;   // Accumulated DFXs per share, times 1e18. See below.
     }
 
     // The DFX TOKEN!
@@ -163,9 +164,9 @@ contract DfxFarmingPool is Ownable {
             uint256 dfxReward = multiplier.mul(dfxPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
             dfxReward = availableDfx(dfxReward); // XXX: amount available for transfer
             dfxReward = dfxReward.sub(dfxReward.div(10)); // XXX: subtract tokens for dev
-            accDfxPerShare = accDfxPerShare.add(dfxReward.mul(1e12).div(lpSupply));
+            accDfxPerShare = accDfxPerShare.add(dfxReward.mul(1e18).div(lpSupply));
         }
-        return user.amount.mul(accDfxPerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount.mul(accDfxPerShare).div(1e18).sub(user.rewardDebt);
     }
 
     // Update reward variables for all pools. Be careful of gas spending!
@@ -192,7 +193,7 @@ contract DfxFarmingPool is Ownable {
         dfxReward = dfxReservoir.drip(dfxReward); // XXX: transfer tokens from dfxReservoir
         dfx.transfer(devaddr, dfxReward.div(10)); // XXX: transfer tokens to devaddr
         dfxReward = dfxReward.sub(dfxReward.div(10)); // XXX: subtract tokens for dev
-        pool.accDfxPerShare = pool.accDfxPerShare.add(dfxReward.mul(1e12).div(lpSupply));
+        pool.accDfxPerShare = pool.accDfxPerShare.add(dfxReward.mul(1e18).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
@@ -202,7 +203,7 @@ contract DfxFarmingPool is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accDfxPerShare).div(1e12).sub(user.rewardDebt);
+            uint256 pending = user.amount.mul(pool.accDfxPerShare).div(1e18).sub(user.rewardDebt);
             if(pending > 0) {
                 safeDfxTransfer(msg.sender, pending);
             }
@@ -211,7 +212,7 @@ contract DfxFarmingPool is Ownable {
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accDfxPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accDfxPerShare).div(1e18);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -221,7 +222,7 @@ contract DfxFarmingPool is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accDfxPerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount.mul(pool.accDfxPerShare).div(1e18).sub(user.rewardDebt);
         if(pending > 0) {
             safeDfxTransfer(msg.sender, pending);
         }
@@ -229,7 +230,7 @@ contract DfxFarmingPool is Ownable {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accDfxPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accDfxPerShare).div(1e18);
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
