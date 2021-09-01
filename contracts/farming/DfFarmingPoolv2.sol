@@ -7,61 +7,60 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./interfaces/IReservoir.sol";
+import "./interfaces/IDefirexTreasury.sol";
 
-contract DfxFarmingPool is Ownable {
+contract DfxFarmingPoolV2 is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     // Info of each user.
     struct UserInfo {
-        uint256 amount;     // How many LP tokens the user has provided.
-        uint256 rewardDebt; // Reward debt. See explanation below.
-        //
-        // We do some fancy math here. Basically, any point in time, the amount of DFXs
-        // entitled to a user but is pending to be distributed is:
-        //
-        //   pending reward = (user.amount * pool.accDfxPerShare) - user.rewardDebt
-        //
-        // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accDfxPerShare` (and `lastRewardBlock`) gets updated.
-        //   2. User receives the pending reward sent to his/her address.
-        //   3. User's `amount` gets updated.
-        //   4. User's `rewardDebt` gets updated.
+        uint256 amount;
+        uint256 rewardDebt;
     }
 
-    
     IERC20 public dfDepositAsset;
     IERC20 public dfRewardAsset;
     
-    mapping (address => UserInfo)) public userInfo;
+    mapping (address => UserInfo) public userInfo;
 
-    // XXX: token reservoir.
-    IReservoir public dfRewardAssetReservoir;
+    IDefirexTreasury public dfTreasury;
+
+    uint256 totalAddedRewards;
+    uint256 totalVirtualRewards;
+    uint256 totalDeposit;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
 
-    event SetDfxReservoir(address reservoir); // XXX: set reservoir event
-
     constructor(
         IERC20 _dfRewardAsset,
-        IERC20 _dfDepositAsset,
+        IERC20 _dfDepositAsset
     ) public {
         dfRewardAsset = _dfRewardAsset;
         dfDepositAsset = _dfDepositAsset;
     }
 
+    modifier checkTreasury() {
+        if (dfTreasury.isAllowedGathering()) dfTreasury.gather();
+        uint256 bal = dfRewardAsset.balanceOf(address(this));
+        if (bal > totalAddedRewards) {
+            totalVirtualRewards = totalVirtualRewards.add(bal - totalAddedRewards);
+            totalAddedRewards = bal;
+        }
+        _;
+    }
     // XXX: set dfRewardAssetReservoir. Can only be called by the owner.
-    function setDfxReservoir(IReservoir _dfRewardAssetReservoir) public onlyOwner {
-        dfRewardAssetReservoir = _dfRewardAssetReservoir;
-        emit SetDfxReservoir(address(_dfRewardAssetReservoir));
+    function setDfTreasury(IDefirexTreasury _dfTreasury) public onlyOwner {
+        dfTreasury = _dfTreasury;
     }
 
-    uint256 totalVirtualRewards;
-    uint256 totalDeposit;
-    
+    function addRewards(uint256 _amount) public {
+        dfRewardAsset.transferFrom(msg.sender, address(this), _amount);
+        totalVirtualRewards += _amount;
+    }
+
     // View function to see pending DFXs on frontend.
     function pendingDfx(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
@@ -70,12 +69,12 @@ contract DfxFarmingPool is Ownable {
     }
 
     // View function to see pending DFXs on frontend.
-    function rawPendingDfx(UserInfo storage user) internal view returns (uint256) {  
+    function rawPendingDfx(UserInfo storage user) internal view returns (uint256) {
         return totalVirtualRewards.mul(user.amount).div(totalDeposit).sub(user.rewardDebt);
     }
 
     // Deposit LP tokens to DfxFarmingPool for DFX allocation.
-    function deposit(uint256 _amount) public {
+    function deposit(uint256 _amount) checkTreasury public {
         UserInfo storage user = userInfo[msg.sender];
  
         if (user.amount > 0) {
@@ -88,7 +87,9 @@ contract DfxFarmingPool is Ownable {
             dfDepositAsset.safeTransferFrom(address(msg.sender), address(this), _amount);
             uint256 _old_totalDeposit = totalDeposit; 
             totalDeposit = _old_totalDeposit.add(_amount);
-            totalVirtualRewards = totalVirtualRewards.mul(_old_totalDeposit.add(_amount)).div(_old_totalDeposit); // TODO: check calculations
+            if (_old_totalDeposit > 0) {
+                totalVirtualRewards = totalVirtualRewards.mul(_old_totalDeposit.add(_amount)).div(_old_totalDeposit); // TODO: check calculations
+            }
             user.amount = user.amount.add(_amount);
         }
         user.rewardDebt = rawPendingDfx(user);
@@ -96,7 +97,7 @@ contract DfxFarmingPool is Ownable {
     }
 
     // Withdraw LP tokens from DfxFarmingPool.
-    function withdraw(uint256 _amount) public {
+    function withdraw(uint256 _amount) checkTreasury public {
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
 

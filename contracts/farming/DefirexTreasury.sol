@@ -4,7 +4,7 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "..\..\Flat_DfrFarmingPool_v2.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /**
  * @title Reservoir
@@ -13,7 +13,8 @@ import "..\..\Flat_DfrFarmingPool_v2.sol";
  * of transfer them to another target address (it is assumed that
  * it will be a contract address).
  */
-contract Reservoir is Ownable {
+contract DefirexTreasury is Ownable {
+    using SafeMath for uint256;
 
     struct DistributionInfo
     {
@@ -33,9 +34,10 @@ contract Reservoir is Ownable {
 
     }
 
-    function add(IERC20 _token, address _target, uint64 _percent, uint64 _lastTimestamp) onlyOwner public {
+    function add(IERC20 _token, address _target, uint64 _interval, uint64 _percent, uint64 _lastTimestamp) onlyOwner public {
         require(_percent <= 100 * 1000);
-        info[_target] = DistributionInfo(_token,_lastTimestamp, _percent);
+        if (_lastTimestamp == 0) _lastTimestamp = uint64(block.timestamp);
+        info[_target] = DistributionInfo(_token, _interval, _lastTimestamp, _percent);
     }
 
     function changePercent(address _target, uint64 _percent, uint64 _interval) onlyOwner public {
@@ -44,22 +46,21 @@ contract Reservoir is Ownable {
         info[_target].interval = _interval;
     }
 
-    /**
-     * @dev Transfers a certain amount of tokens to the target address.
-     *
-     * Requirements:
-     * - msg.sender should be the target address.
-     *
-     * @param requestedTokens The amount of tokens to transfer.
-     */
-    function drip()
+
+    function isAllowedGathering() external returns (bool) {
+        DistributionInfo storage _inf = info[msg.sender];
+        return block.timestamp >= _inf.lastTimestamp + _inf.interval;
+    }
+
+    function gather()
     external
     returns (uint256 _tokensToSend)
     {
         DistributionInfo storage _inf = info[msg.sender];
+        require(_inf.lastTimestamp > 0, "not exits");
         require(block.timestamp >= _inf.lastTimestamp + _inf.interval, "early");
-        _inf.lastTimestamp = block.timestamp;
+        _inf.lastTimestamp = uint64(block.timestamp);
         _tokensToSend = _inf.token.balanceOf(address(this)).mul(_inf.percent).div(100 * 1000);
-        _inf.token.transfer(_inf.target, _tokensToSend);
+        _inf.token.transfer(msg.sender, _tokensToSend);
     }
 }
