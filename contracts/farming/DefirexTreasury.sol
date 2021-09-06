@@ -36,7 +36,7 @@ contract DefirexTreasury is Ownable {
 
     function add(IERC20 _token, address _target, uint64 _interval, uint64 _percent, uint64 _lastTimestamp) onlyOwner public {
         require(_percent <= 100 * 1000);
-        if (_lastTimestamp == 0) _lastTimestamp = uint64(block.timestamp);
+        if (_lastTimestamp == 0) _lastTimestamp = uint64(block.timestamp - _interval);
         info[_target] = DistributionInfo(_token, _interval, _lastTimestamp, _percent);
     }
 
@@ -47,20 +47,20 @@ contract DefirexTreasury is Ownable {
     }
 
 
-    function isAllowedGathering() external returns (bool) {
-        DistributionInfo storage _inf = info[msg.sender];
+    function isAllowedGathering(address _target) external view returns (bool) {
+        DistributionInfo storage _inf = info[_target];
         return block.timestamp >= _inf.lastTimestamp + _inf.interval;
     }
 
-    function gather()
+    function gather(address _target)
     external
     returns (uint256 _tokensToSend)
     {
-        DistributionInfo storage _inf = info[msg.sender];
+        DistributionInfo storage _inf = info[_target];
         require(_inf.lastTimestamp > 0, "not exits");
         require(block.timestamp >= _inf.lastTimestamp + _inf.interval, "early");
         _inf.lastTimestamp = uint64(block.timestamp);
         _tokensToSend = _inf.token.balanceOf(address(this)).mul(_inf.percent).div(100 * 1000);
-        _inf.token.transfer(msg.sender, _tokensToSend);
+        _inf.token.transfer(_target, _tokensToSend);
     }
 }

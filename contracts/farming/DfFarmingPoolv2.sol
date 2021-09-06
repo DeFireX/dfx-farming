@@ -43,7 +43,10 @@ contract DfxFarmingPoolV2 is Ownable {
     }
 
     modifier checkTreasury() {
-        if (dfTreasury.isAllowedGathering()) dfTreasury.gather();
+        if (dfTreasury.isAllowedGathering(address(this))) {
+            dfTreasury.gather(address(this));
+        }
+
         uint256 bal = dfRewardAsset.balanceOf(address(this));
         if (bal > totalAddedRewards) {
             totalVirtualRewards = totalVirtualRewards.add(bal - totalAddedRewards);
@@ -56,13 +59,8 @@ contract DfxFarmingPoolV2 is Ownable {
         dfTreasury = _dfTreasury;
     }
 
-    function addRewards(uint256 _amount) public {
-        dfRewardAsset.transferFrom(msg.sender, address(this), _amount);
-        totalVirtualRewards += _amount;
-    }
-
     // View function to see pending DFXs on frontend.
-    function pendingDfx(address _user) external view returns (uint256) {
+    function pendingReward(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
         
         return totalVirtualRewards.mul(user.amount).div(totalDeposit).sub(user.rewardDebt);
@@ -92,7 +90,7 @@ contract DfxFarmingPoolV2 is Ownable {
             }
             user.amount = user.amount.add(_amount);
         }
-        user.rewardDebt = rawPendingDfx(user);
+        user.rewardDebt = totalVirtualRewards.mul(user.amount).div(totalDeposit);
         emit Deposit(msg.sender, _amount);
     }
 
@@ -110,10 +108,13 @@ contract DfxFarmingPoolV2 is Ownable {
             uint256 _old_totalDeposit = totalDeposit;
             user.amount = user.amount.sub(_amount);
             totalDeposit = _old_totalDeposit.sub(_amount);
+
             totalVirtualRewards = totalVirtualRewards.mul(_old_totalDeposit.sub(_amount)).div(_old_totalDeposit); // TODO: check calculations
+
             dfDepositAsset.safeTransfer(address(msg.sender), _amount);
         }
-        user.rewardDebt = rawPendingDfx(user);
+
+        user.rewardDebt = totalVirtualRewards.mul(user.amount).div(totalDeposit);
         emit Withdraw(msg.sender, _amount);
     }
 
@@ -133,10 +134,9 @@ contract DfxFarmingPoolV2 is Ownable {
     // Safe dfRewardAsset transfer function, just in case if rounding error causes pool to not have enough DFXs.
     function safeDfxTransfer(address _to, uint256 _amount) internal {
         uint256 dfRewardAssetBal = dfRewardAsset.balanceOf(address(this));
-        if (_amount > dfRewardAssetBal) {
-            dfRewardAsset.transfer(_to, dfRewardAssetBal);
-        } else {
-            dfRewardAsset.transfer(_to, _amount);
-        }
+        if (_amount > dfRewardAssetBal) _amount = dfRewardAssetBal;
+
+        dfRewardAsset.transfer(_to, _amount);
+        totalAddedRewards = totalAddedRewards.sub(_amount);
     }
 }
