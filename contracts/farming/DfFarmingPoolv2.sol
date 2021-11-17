@@ -62,12 +62,13 @@ contract DfxFarmingPoolV2 is Ownable {
     // View function to see pending DFXs on frontend.
     function pendingReward(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
-        
+        if (totalDeposit == 0) return 0;
         return totalVirtualRewards.mul(user.amount).div(totalDeposit).sub(user.rewardDebt);
     }
 
     // View function to see pending DFXs on frontend.
     function rawPendingDfx(UserInfo storage user) internal view returns (uint256) {
+        if (totalDeposit == 0) return 0;
         return totalVirtualRewards.mul(user.amount).div(totalDeposit).sub(user.rewardDebt);
     }
 
