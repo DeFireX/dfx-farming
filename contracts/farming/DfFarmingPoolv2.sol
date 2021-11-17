@@ -29,6 +29,7 @@ contract DfxFarmingPoolV2 is Ownable {
     uint256 totalAddedRewards;
     uint256 totalVirtualRewards;
     uint256 totalDeposit;
+    bool bOnlyHuman;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
@@ -40,41 +41,39 @@ contract DfxFarmingPoolV2 is Ownable {
     ) public {
         dfRewardAsset = _dfRewardAsset;
         dfDepositAsset = _dfDepositAsset;
+        bOnlyHuman = true;
     }
 
-    modifier checkTreasury() {
-        if (dfTreasury.isAllowedGathering(address(this))) {
-            dfTreasury.gather(address(this));
-        }
-
-        uint256 bal = dfRewardAsset.balanceOf(address(this));
-        if (bal > totalAddedRewards) {
-            totalVirtualRewards = totalVirtualRewards.add(bal - totalAddedRewards);
-            totalAddedRewards = bal;
-        }
+    modifier onlyHuman() {
+        if (bOnlyHuman) require(msg.sender == tx.origin, "!human");
         _;
     }
+
     // XXX: set dfRewardAssetReservoir. Can only be called by the owner.
     function setDfTreasury(IDefirexTreasury _dfTreasury) public onlyOwner {
         dfTreasury = _dfTreasury;
     }
 
+    function setOnlyHumanFlag(bool bEnable) onlyOwner public {
+        bOnlyHuman = bEnable;
+    }
+
     // View function to see pending DFXs on frontend.
-    function pendingReward(address _user) external view returns (uint256) {
+    function pendingReward(address _user) external returns (uint256) {
+        checkTreasury();
+
         UserInfo storage user = userInfo[_user];
         if (totalDeposit == 0) return 0;
         return totalVirtualRewards.mul(user.amount).div(totalDeposit).sub(user.rewardDebt);
     }
 
-    // View function to see pending DFXs on frontend.
-    function rawPendingDfx(UserInfo storage user) internal view returns (uint256) {
-        if (totalDeposit == 0) return 0;
-        return totalVirtualRewards.mul(user.amount).div(totalDeposit).sub(user.rewardDebt);
-    }
-
     // Deposit LP tokens to DfxFarmingPool for DFX allocation.
-    function deposit(uint256 _amount) checkTreasury public {
+    function deposit(uint256 _amount) onlyHuman public {
+        require(msg.sender == tx.origin, "!human");
+
         UserInfo storage user = userInfo[msg.sender];
+
+        checkTreasury();
  
         if (user.amount > 0) {
             uint256 pending = rawPendingDfx(user);
@@ -96,13 +95,15 @@ contract DfxFarmingPoolV2 is Ownable {
     }
 
     // Withdraw LP tokens from DfxFarmingPool.
-    function withdraw(uint256 _amount) checkTreasury public {
+    function withdraw(uint256 _amount) onlyHuman public returns(uint256 _userPendingReward) {
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
 
-        uint256 pending = rawPendingDfx(user);
-        if(pending > 0) {
-            safeDfxTransfer(msg.sender, pending);
+        checkTreasury();
+
+        _userPendingReward = rawPendingDfx(user);
+        if(_userPendingReward > 0) {
+            safeDfxTransfer(msg.sender, _userPendingReward);
         }
 
         if(_amount > 0) {
@@ -120,7 +121,7 @@ contract DfxFarmingPoolV2 is Ownable {
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function emergencyWithdraw() public {
+    function emergencyWithdraw() onlyHuman public {
         UserInfo storage user = userInfo[msg.sender];
         uint256 amount = user.amount;
         user.amount = 0;
@@ -139,5 +140,22 @@ contract DfxFarmingPoolV2 is Ownable {
 
         dfRewardAsset.transfer(_to, _amount);
         totalAddedRewards = totalAddedRewards.sub(_amount);
+    }
+
+    function checkTreasury() internal {
+        if (dfTreasury.isAllowedGathering(address(this))) {
+            dfTreasury.gather(address(this));
+        }
+
+        uint256 bal = dfRewardAsset.balanceOf(address(this));
+        if (bal > totalAddedRewards) {
+            totalVirtualRewards = totalVirtualRewards.add(bal - totalAddedRewards);
+            totalAddedRewards = bal;
+        }
+    }
+
+    function rawPendingDfx(UserInfo storage user) internal view returns (uint256) {
+        if (totalDeposit == 0) return 0;
+        return totalVirtualRewards.mul(user.amount).div(totalDeposit).sub(user.rewardDebt);
     }
 }
