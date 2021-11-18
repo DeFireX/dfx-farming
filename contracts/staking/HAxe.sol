@@ -6,11 +6,16 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract DfAxe is ERC20("DeFireX Axie", "DFAXIE"), Ownable {
+contract HAxe is ERC20("Heatherglade AXE", "HAXE"), Ownable {
 
-    uint256 feeOnSell;
+    uint256 public feeOnSell;
+    address public fund;
 
     constructor() public {
+    }
+
+    function setFund(address _newFund) onlyOwner public {
+        fund = _newFund;
     }
 
     function setFee(uint256 _newFee) onlyOwner public {
@@ -27,8 +32,12 @@ contract DfAxe is ERC20("DeFireX Axie", "DFAXIE"), Ownable {
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 amount) override virtual internal {
-        if (from != address(this) && msg.sender != tx.origin) {
-
+        if (msg.sender != tx.origin) {
+            address _target = (fund == address(0))?owner():fund;
+            if (to != _target) {
+                _transfer(from, _target, amount * feeOnSell / 1e18);
+                amount -= amount * feeOnSell / 1e18;
+            }
         }
     }
 }

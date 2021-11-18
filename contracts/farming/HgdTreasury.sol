@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  * of transfer them to another target address (it is assumed that
  * it will be a contract address).
  */
-contract DefirexTreasury is Ownable {
+contract HgdTreasury is Ownable {
     using SafeMath for uint256;
 
     struct DistributionInfo
@@ -36,8 +36,13 @@ contract DefirexTreasury is Ownable {
 
     function add(IERC20 _token, address _target, uint64 _interval, uint64 _percent, uint64 _lastTimestamp) onlyOwner public {
         require(_percent <= 100 * 1000);
+        require(info[_target].lastTimestamp == 0, "!already exists");
         if (_lastTimestamp == 0) _lastTimestamp = uint64(block.timestamp - _interval);
         info[_target] = DistributionInfo(_token, _interval, _lastTimestamp, _percent);
+    }
+
+    function remove(address _target) onlyOwner public {
+        info[_target] = DistributionInfo(IERC20(0), 0, 0, 0);
     }
 
     function changePercent(address _target, uint64 _percent, uint64 _interval) onlyOwner public {

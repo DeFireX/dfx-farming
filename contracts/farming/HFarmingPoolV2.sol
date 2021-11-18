@@ -7,9 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./interfaces/IDefirexTreasury.sol";
+import "./interfaces/IHgdTreasury.sol";
 
-contract DfxFarmingPoolV2 is Ownable {
+contract HFarmingPoolV2 is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -24,7 +24,7 @@ contract DfxFarmingPoolV2 is Ownable {
     
     mapping (address => UserInfo) public userInfo;
 
-    IDefirexTreasury public dfTreasury;
+    IHgdTreasury public dfTreasury;
 
     uint256 totalAddedRewards;
     uint256 totalVirtualRewards;
@@ -50,7 +50,7 @@ contract DfxFarmingPoolV2 is Ownable {
     }
 
     // XXX: set dfRewardAssetReservoir. Can only be called by the owner.
-    function setDfTreasury(IDefirexTreasury _dfTreasury) public onlyOwner {
+    function setDfTreasury(IHgdTreasury _dfTreasury) public onlyOwner {
         dfTreasury = _dfTreasury;
     }
 
